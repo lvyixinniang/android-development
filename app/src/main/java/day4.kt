@@ -3,16 +3,23 @@ import kotlin.random.Random
 class day4 {
 
 }
-// pending, paid, cancelled
+// 1. 枚举类：固定状态集合
+// 【企业注记】：通常配合数据库的 status 字段（tinyint）映射，比如 0=PENDING, 1=PAID...
 enum class OrderStatus {
     PENDING, PAID, CANCELLED
 }
 
+// 2. 数据类：自动生成 toString/equals/copy
+// 【企业注记】：copy() 非常常用，比如后台更新订单状态时，
+// 直接 order.copy(status = PAID) 生成新对象，保持不可变性。
 data class Order(
     val orderId: String,
     val amount: Double,
     val status: OrderStatus
 ) {
+    // 3. 伴生对象：相当于 Java 的 static
+    // 【企业注记】：通常在这里定义常量 companion object { const val TAG = "Order" }
+    // 或者作为静态工厂方法，比直接调用构造函数更语义化
     companion object {
         fun create(amount: Double): Order {
             val id  = "ORD- ${Random.nextInt(1000, 9999)}"
@@ -21,12 +28,17 @@ data class Order(
     }
 }
 
+// 4. 密封类：限定结果类型（只能有 Success, Failure, Loading）
+// 【企业注记】：这是最标准的网络请求封装写法！在 Android 的 ViewModel 里，
+// 用 sealed class 包装 LiveData/Flow，UI 层用 when 处理，绝不漏掉 Loading 状态。
 sealed class OrderResult {
     data class Success(val order:Order) : OrderResult()
     data class Failure(val errorMsg: String) : OrderResult()
     object Loading : OrderResult()
 }
 
+// 5. 单例对象（Service 层）
+// 【企业注记】：在 Koin/Spring 中，Service 默认就是单例。这里模拟业务逻辑。
 object OrderService {
     fun pay(order: Order) : OrderResult {
         println("模拟支付")
@@ -40,11 +52,15 @@ object OrderService {
     }
 }
 
+// 模拟 Android/Java 的点击监听接口
 interface PaymentClickListener {
     fun onClick(order: Order)
 }
 
 fun main() {
+    // 6. 对象表达式：创建匿名内部类（一次性使用）
+    // 【企业注记】：在 Android 中，button.setOnClickListener(object : View.OnClickListener{...})
+    // 在后台 Java 中， new Thread(new Runnable(){...}) 的完美替代品。
     val clickListener = object : PaymentClickListener {
         override fun onClick(order: Order) {
             println(">>> 用户点击了支付按钮，订单号: ${order.orderId}")
